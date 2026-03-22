@@ -1,0 +1,85 @@
+name: Security Checks
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ── 1. Secret scanning ────────────────────────────────────────────────────
+  gitleaks:
+    name: Scan for secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for accurate scanning
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── 2. Python dependency audit ────────────────────────────────────────────
+  pip-audit:
+    name: Audit Python dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit requirements
+        run: pip-audit -r backend/requirements.txt --strict
+
+  # ── 3. Python security linting ────────────────────────────────────────────
+  bandit:
+    name: Python security lint (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install bandit
+        run: pip install "bandit[toml]"
+      - name: Run bandit
+        run: bandit -r backend/ -c pyproject.toml --severity-level medium
+
+  # ── 4. Python unit tests (risk engine) ───────────────────────────────────
+  test-risk-engine:
+    name: Risk engine tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run tests
+        run: pytest backend/tests/ -v --tb=short
+
+  # ── 5. Node.js dependency audit ──────────────────────────────────────────
+  npm-audit:
+    name: Audit Node.js dependencies
+    runs-on: ubuntu-latest
+    # Only run if dashboard directory exists
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check dashboard exists
+        id: check
+        run: test -f package.json && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+      - name: Audit
+        if: steps.check.outputs.exists == 'true'
+        run: npm audit --audit-level=high

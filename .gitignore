@@ -1,0 +1,98 @@
+# ============================================================
+# SECRETS — NEVER COMMIT ANY OF THESE
+# ============================================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.secret
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Alpaca API keys
+alpaca_*.json
+alpaca_config.json
+
+# Supabase
+supabase/.env
+.supabase/
+
+# Claude / Anthropic
+anthropic_*.json
+
+# ============================================================
+# PYTHON
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+ENV/
+env/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ============================================================
+# NODE / NEXT.JS
+# ============================================================
+node_modules/
+.next/
+out/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/cache
+.pnp.*
+*.tsbuildinfo
+
+# ============================================================
+# LOGS & DATA
+# ============================================================
+logs/
+*.log
+*.log.*
+trades/
+trade_logs/
+backtest_results/
+*.csv
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================================
+# OS / EDITOR
+# ============================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ============================================================
+# DEPLOYMENT
+# ============================================================
+*.tfstate
+*.tfstate.*
+.terraform/
+infra/terraform.tfvars

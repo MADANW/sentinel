@@ -1,0 +1,20 @@
+[tool.bandit]
+# Bandit security linting config
+# Exclude test files from some checks (test code uses assert, etc.)
+exclude_dirs = ["backend/tests", ".venv", "venv"]
+skips = []
+# Report medium and high severity
+severity = "medium"
+confidence = "medium"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "S"]  # S = bandit-equivalent security rules
+ignore = ["S101"]  # allow assert in tests
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
