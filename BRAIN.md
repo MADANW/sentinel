@@ -40,11 +40,12 @@ algo-bot is a personal trading system built for a single operator. You provide a
 - [x] Alpaca bracket order submission (`backend/core/order_executor.py`)
 - [x] Paper trading end-to-end smoke test (`backend/tests/test_smoke.py`)
 
-### Sprint 3 — Dashboard (upcoming)
+### Sprint 3 — Dashboard
 
-- [ ] Next.js app scaffold
-- [ ] Supabase trade journal integration
-- [ ] Daily P&L display
+- [x] Next.js 15 app scaffold with Tailwind (`dashboard/`)
+- [x] Supabase trades table schema (`supabase/migrations/001_create_trades.sql`)
+- [x] Python trade journal — log/close/query trades (`backend/core/journal.py`)
+- [x] Daily P&L display with trade table (`dashboard/app/page.tsx`)
 
 ---
 
