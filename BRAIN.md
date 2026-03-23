@@ -33,12 +33,12 @@ algo-bot is a personal trading system built for a single operator. You provide a
 - [ ] Fix CI: `No module named 'backend'` (missing `pythonpath` config)
 - [ ] Fix CI: `pandas-ta` version incompatible with `pandas>=2.0`
 
-### Sprint 2 — Core Trading Logic (upcoming)
+### Sprint 2 — Core Trading Logic
 
-- [ ] Alpaca bracket order submission
-- [ ] EMA crossover signal detection
-- [ ] Morning bias prompt pipeline (Claude API call → validate → decide)
-- [ ] Paper trading end-to-end smoke test
+- [x] EMA crossover signal detection (`backend/core/signals.py`)
+- [x] Morning bias prompt pipeline — Claude API call → validate → decide (`backend/core/morning_pipeline.py`)
+- [x] Alpaca bracket order submission (`backend/core/order_executor.py`)
+- [x] Paper trading end-to-end smoke test (`backend/tests/test_smoke.py`)
 
 ### Sprint 3 — Dashboard (upcoming)
 
@@ -77,7 +77,8 @@ algo-bot/
 | # | What Went Wrong | Root Cause | Fix Applied | Date |
 |---|-----------------|------------|-------------|------|
 | 1 | `No module named 'backend'` in all 22 tests | `pythonpath` not set in pytest config; project root not on `sys.path` | Added `pythonpath = ["."]` to `[tool.pytest.ini_options]` in `pyproject.toml` | 2026-03-22 |
-| 2 | `pip-audit` CI fails: `pandas-ta==0.3.14b0` not resolvable | `pandas-ta` pre-release is incompatible with `pandas>=2.0`; package effectively unmaintained | Replaced with `pandas-ta>=0.3.14b0` (pre-release flag) — to be swapped for a maintained TA library in Sprint 2 | 2026-03-22 |
+| 2 | `pip-audit` CI fails: `pandas-ta==0.3.14b0` not resolvable | `pandas-ta` pre-release is incompatible with `pandas>=2.0`; package effectively unmaintained | Removed `pandas-ta`; implemented EMA crossover directly using `pandas.ewm()` in Sprint 2 — no external TA library needed | 2026-03-22 |
+| 3 | `crossover_detected is False` assertion fails in test | `pandas` comparisons return `numpy.bool_`, not Python `bool`; `numpy.bool_(False) is False` → `False` | Added explicit `bool()` cast in `signals.py` crossover detection | 2026-03-23 |
 
 ---
 
