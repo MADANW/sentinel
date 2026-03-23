@@ -13,7 +13,6 @@ EMA crossover rules:
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from typing import Literal
 
@@ -109,67 +108,23 @@ def fetch_ohlcv(symbol: str, timeframe: str = "1Day", limit: int = 50) -> pd.Dat
     """
     Fetch OHLCV bars from Alpaca historical data API.
 
-    Returns a DataFrame with columns: open, high, low, close, volume.
-    Sorted oldest-first. Requires ALPACA_API_KEY and ALPACA_SECRET_KEY env vars.
+    Backward-compatible wrapper around data_fetcher.fetch_ohlcv().
+    New code should use data_fetcher.fetch_ohlcv(ticker, days) directly.
 
     Args:
         symbol:    Ticker symbol, e.g. "SPY".
-        timeframe: Bar timeframe. Supported: "1Day", "1Hour", "15Min", "5Min".
-        limit:     Number of bars to fetch. Default 50.
+        timeframe: Bar timeframe (only "1Day" is supported via data_fetcher).
+        limit:     Approximate number of trading bars. Converted to calendar days.
 
     Raises:
-        SignalError on missing credentials, unsupported timeframe, or API errors.
+        SignalError on missing credentials or API errors.
     """
-    from datetime import datetime, timedelta, timezone
+    from .data_fetcher import DataFetcherError, fetch_ohlcv as _df_fetch_ohlcv
 
-    from alpaca.data.historical import StockHistoricalDataClient
-    from alpaca.data.requests import StockBarsRequest
-    from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
-
-    api_key = os.environ.get("ALPACA_API_KEY")
-    secret_key = os.environ.get("ALPACA_SECRET_KEY")
-    if not api_key or not secret_key:
-        raise SignalError("ALPACA_API_KEY and ALPACA_SECRET_KEY must be set.")
-
-    _timeframe_map = {
-        "1Day": TimeFrame.Day,
-        "1Hour": TimeFrame.Hour,
-        "15Min": TimeFrame(15, TimeFrameUnit.Minute),
-        "5Min": TimeFrame(5, TimeFrameUnit.Minute),
-    }
-    tf = _timeframe_map.get(timeframe)
-    if tf is None:
-        raise SignalError(
-            f"Unsupported timeframe: {timeframe!r}. "
-            f"Supported: {list(_timeframe_map)}."
-        )
-
-    end = datetime.now(timezone.utc)
-    # Request enough calendar days to cover `limit` trading bars
-    start = end - timedelta(days=limit * 2)
-
-    client = StockHistoricalDataClient(api_key=api_key, secret_key=secret_key)
-    request = StockBarsRequest(
-        symbol_or_symbols=symbol.upper(),
-        timeframe=tf,
-        start=start,
-        end=end,
-        limit=limit,
-    )
+    # Convert bar count to approximate calendar days (1.5x buffer for weekends/holidays)
+    days = int(limit * 1.5)
 
     try:
-        bars = client.get_stock_bars(request)
-    except Exception as exc:
-        raise SignalError(
-            f"Alpaca API error fetching {timeframe} bars for {symbol}: {exc}"
-        ) from exc
-
-    df = bars.df
-    if df is None or df.empty:
-        raise SignalError(f"No bars returned for {symbol}.")
-
-    # bars.df may carry a MultiIndex (symbol, timestamp) — drop the symbol level
-    if isinstance(df.index, pd.MultiIndex):
-        df = df.droplevel(0)
-
-    return df.sort_index()
+        return _df_fetch_ohlcv(ticker=symbol, days=days)
+    except DataFetcherError as exc:
+        raise SignalError(str(exc)) from exc

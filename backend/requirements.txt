@@ -12,7 +12,11 @@ anthropic==0.26.0
 pandas==2.2.1
 numpy==1.26.4
 # pandas-ta removed: 0.3.14b0 pre-release is incompatible with pandas>=2.0 and
-# doesn't resolve on PyPI. EMA crossover (Sprint 2) will add a working TA library.
+# doesn't resolve on PyPI. All TA computations use pure pandas/numpy inline.
+
+# ML
+xgboost==2.0.3
+scikit-learn==1.4.2
 
 # Environment
 python-dotenv==1.0.1

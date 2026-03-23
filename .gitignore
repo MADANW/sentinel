@@ -90,6 +90,16 @@ Thumbs.db
 *~
 
 # ============================================================
+# ML MODEL ARTIFACTS
+# ============================================================
+# classifier.pkl is a binary artifact — never commit (gitignored).
+# classifier.sha256 IS committed — it is the integrity anchor for the pkl.
+# NEVER accept classifier.pkl from an external source (see BRAIN.md).
+models/classifier.pkl
+models/*.pkl
+models/*.tmp
+
+# ============================================================
 # DEPLOYMENT
 # ============================================================
 *.tfstate
