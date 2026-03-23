@@ -130,6 +130,9 @@ def main(ticker: str) -> int:
 
     if bias is None:
         logger.info("No trade today — pipeline returned no signal.")
+        # Log the pipeline run (gate details not available at this level — morning_pipeline
+        # logs gate-specific reasons; here we record the top-level outcome only)
+        _log_pipeline_run_safe(ticker=ticker, trade_submitted=False, skip_reason="gate_failed")
         return 0
 
     logger.info(
@@ -214,7 +217,36 @@ def main(ticker: str) -> int:
         # Journal failure does NOT abort — the trade was already submitted
         logger.error("Journal logging failed (trade already submitted): %s", exc)
 
+    # ── Pipeline run log ─────────────────────────────────────────────────────
+    _log_pipeline_run_safe(
+        ticker=ticker,
+        trade_submitted=result.success,
+        skip_reason=None if result.success else result.error,
+    )
+
     return 0
+
+
+def _log_pipeline_run_safe(
+    *,
+    ticker: str,
+    trade_submitted: bool,
+    skip_reason: str | None,
+) -> None:
+    """
+    Log the pipeline outcome to pipeline_runs. Non-fatal — never raises.
+    """
+    from backend.core.pipeline_logger import log_pipeline_run
+
+    try:
+        log_pipeline_run(
+            ticker=ticker,
+            trade_submitted=trade_submitted,
+            skip_reason=skip_reason,
+        )
+    except Exception as exc:
+        # Pipeline log failure must not abort — it is observability only
+        logger.error("Pipeline run logging failed (non-fatal): %s", exc)
 
 
 if __name__ == "__main__":

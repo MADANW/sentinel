@@ -1,0 +1,12 @@
+title = "algo-bot gitleaks config"
+
+[allowlist]
+  description = "Safe files that can contain example/placeholder secrets"
+  paths = [
+    ".env.example",
+    ".env.local.example",
+    "dashboard/.env.local.example",
+    "SECURITY.md",
+    "BRAIN.md",
+    "README.md",
+  ]
