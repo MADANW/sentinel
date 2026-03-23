@@ -1,0 +1,79 @@
+algo-bot — Full Project Overview
+=================================
+
+WHAT IT DOES
+------------
+You provide morning news headlines. The bot queries Claude for a directional
+bias, validates it, checks risk limits, and submits a bracket order to Alpaca.
+Everything is logged to Supabase and visible in the dashboard.
+
+
+ARCHITECTURE
+------------
+Headlines (you)
+     |
+     v
+morning_pipeline.py  ->  Claude API  ->  parse_bias_response()
+     |
+     v
+TradingBias (bullish/bearish, confidence >= 60%)
+     |
+     v
+risk_engine.py  ->  check_kill_switch()  ->  validate_order()  ->  qty
+     |
+     v
+order_executor.py  ->  Alpaca bracket order (entry + stop + target)
+     |
+     v
+journal.py  ->  Supabase trades table
+     |
+     v
+dashboard/  ->  Next.js page (P&L, trade table, kill switch status)
+
+
+FILES
+-----
+algo-bot/
+├── backend/core/
+│   ├── risk_engine.py        — Hardcoded limits + kill switch
+│   ├── bias_validator.py     — Claude response sanitizer
+│   ├── signals.py            — EMA crossover (pandas.ewm)
+│   ├── morning_pipeline.py   — Claude API orchestration
+│   ├── order_executor.py     — Alpaca bracket orders
+│   └── journal.py            — Supabase trade logging
+├── backend/tests/
+│   ├── test_risk_engine.py   — 22 tests
+│   ├── test_smoke.py         — 20 tests (Sprint 2 E2E)
+│   └── test_journal.py       — 11 tests
+├── dashboard/
+│   ├── app/page.tsx          — P&L summary + trade table
+│   ├── app/layout.tsx
+│   └── lib/supabase.ts       — Server-side Supabase client
+├── supabase/migrations/
+│   └── 001_create_trades.sql — trades table schema
+└── .github/workflows/
+    └── security.yml          — gitleaks, pip-audit, bandit, pytest, npm-audit
+
+
+RISK RULES (hardcoded, no overrides)
+-------------------------------------
+Risk per trade      1% of equity
+Daily loss limit    2%  ->  kill switch  ->  sys.exit(1)
+Max trades/day      3
+Min confidence      60%
+
+
+TEST COVERAGE
+-------------
+Sprint 1    22 tests   risk engine + bias validator
+Sprint 2    20 tests   signals, pipeline, order executor, E2E
+Sprint 3    11 tests   journal
+Total       53 passing
+
+
+WHAT'S LEFT
+-----------
+No main entrypoint yet. The individual components all work and are tested,
+but nothing runs the full flow on a schedule. Next step: a main.py or cron
+job that calls run_morning_pipeline() -> validate_order() ->
+submit_bracket_order() -> log_trade() in sequence each morning.
