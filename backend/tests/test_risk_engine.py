@@ -107,7 +107,7 @@ class TestKillSwitch:
     def test_order_rejected_after_kill_switch(self):
         re = _fresh_state()
         re._state.kill_switch_triggered = True
-        with mock.patch("sys.exit"):
+        with mock.patch("sys.exit", side_effect=SystemExit(1)):
             with pytest.raises((re.RiskViolation, SystemExit)):
                 re.check_kill_switch()
 
