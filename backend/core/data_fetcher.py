@@ -21,6 +21,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
+from alpaca.data.enums import DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.requests import NewsRequest, StockBarsRequest
@@ -97,6 +98,13 @@ def fetch_ohlcv(ticker: str, days: int = 60) -> pd.DataFrame:
     # Add buffer for weekends/holidays — request more calendar days than trading days
     start = end - timedelta(days=max(days * 2, 90))
 
+    # Default to IEX feed — works on free-tier Alpaca subscriptions.
+    # SIP (consolidated tape) requires a paid data plan; override via ALPACA_DATA_FEED=sip if available.
+    feed_name = os.environ.get("ALPACA_DATA_FEED", "iex").lower()
+    feed = {"iex": DataFeed.IEX, "sip": DataFeed.SIP, "otc": DataFeed.OTC}.get(
+        feed_name, DataFeed.IEX
+    )
+
     client = StockHistoricalDataClient(api_key=api_key, secret_key=secret_key)
     request = StockBarsRequest(
         symbol_or_symbols=ticker.upper(),
@@ -104,6 +112,7 @@ def fetch_ohlcv(ticker: str, days: int = 60) -> pd.DataFrame:
         start=start,
         end=end,
         limit=days,
+        feed=feed,
     )
 
     try:

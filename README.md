@@ -112,9 +112,12 @@ cp .env.example .env
 #   supabase/migrations/002_create_pipeline_runs.sql
 
 # 7. Train the model (required before first run)
-# This fetches ~3 years of OHLCV data and trains an XGBoost classifier.
+# Fetches ~3 years of OHLCV for each ticker and trains an XGBoost classifier
+# on 12 features (momentum/volume + Hurst/OU/regime). Per-ticker chronological
+# split then concat — no cross-ticker lookahead.
 # Generates models/classifier.pkl (local only) and models/classifier.sha256 (commit this).
-python -m backend.scripts.train_model --ticker SPY --days 756
+# Free-tier Alpaca accounts should set ALPACA_DATA_FEED=iex (the default).
+python -m backend.scripts.train_model --tickers SPY,QQQ,IWM --days 756
 
 # 8. Run tests
 pytest backend/tests/

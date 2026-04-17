@@ -13,8 +13,8 @@ algo-bot is a personal trading system built for a single operator. You provide a
 ## Project Status
 
 - **Current Phase:** Active Development
-- **Last Updated:** 2026-03-22
-- **Active Branch:** claude/self-learn-0lmtC
+- **Last Updated:** 2026-04-16
+- **Active Branch:** claude/update-ml-upgrade-plan-Ayo47
 
 ---
 
@@ -46,6 +46,18 @@ algo-bot is a personal trading system built for a single operator. You provide a
 - [x] Supabase trades table schema (`supabase/migrations/001_create_trades.sql`)
 - [x] Python trade journal — log/close/query trades (`backend/core/journal.py`)
 - [x] Daily P&L display with trade table (`dashboard/app/page.tsx`)
+
+### Sprint F — Mathematical Foundation Upgrade
+
+- [x] Added regime features to `FeatureRow` and `FEATURE_COLUMNS`: `hurst_exponent`, `ou_log_half_life`, `ou_zscore`, `regime_label`
+- [x] Multi-scale R/S Hurst estimator (`_compute_hurst`, 96-bar window) + OLS OU fit with saturation fallback (`_compute_ou_features`, 64-bar window) in `feature_engineering.py`
+- [x] `_MIN_ROWS` bumped to 97 (96-bar Hurst + one prior close)
+- [x] `train_model.py` accepts `--tickers SPY,QQQ,IWM`; per-ticker chronological split then concatenation (no cross-ticker lookahead)
+- [x] Free-tier Alpaca support: `ALPACA_DATA_FEED=iex` default in `fetch_ohlcv` (override to `sip` for paid plans)
+- [x] 17 new unit tests (Hurst, OU, regime) — full suite: 139 passing
+- [x] Classifier retrained on SPY+QQQ+IWM, 756 days → AUC-ROC 0.5623 (above 0.55 gate)
+
+Deferred: Sprint E (paper-trading loop, CODEOWNERS) and MT5 bridge (`mql5/` directory not yet created).
 
 ---
 

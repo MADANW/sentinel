@@ -8,6 +8,7 @@ and model caching. Uses a real (tiny) XGBoost model in some tests.
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import pickle
 import tempfile
@@ -21,10 +22,9 @@ from backend.core.feature_engineering import FEATURE_COLUMNS
 
 def _make_feature_df() -> pd.DataFrame:
     """Build a minimal valid single-row feature DataFrame."""
-    return pd.DataFrame(
-        [[0.0, 0.001, -0.001, 55.0, 0.01, 0.05, 0.002, 0.003]],
-        columns=FEATURE_COLUMNS,
-    )
+    values = [0.0, 0.001, -0.001, 55.0, 0.01, 0.05, 0.002, 0.003, 0.48, math.log1p(12.0), -0.5, 0.0]
+    assert len(values) == len(FEATURE_COLUMNS), "update _make_feature_df when FEATURE_COLUMNS changes"
+    return pd.DataFrame([values], columns=FEATURE_COLUMNS)
 
 
 def _write_model_files(tmpdir: str, model) -> tuple[str, str]:
@@ -222,8 +222,9 @@ class TestPredictDirection:
     def test_multi_row_dataframe_raises(self):
         from backend.core.model import predict_direction, ModelError
 
+        n = len(FEATURE_COLUMNS)
         features = pd.DataFrame(
-            [[0.0] * 8, [0.1] * 8], columns=FEATURE_COLUMNS
+            [[0.0] * n, [0.1] * n], columns=FEATURE_COLUMNS
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             model = _make_mock_model()

@@ -13,10 +13,14 @@ SECURITY NOTES:
   - AUC-ROC >= 0.55 gate: model is rejected and not saved if below this bar.
 
 Usage:
-  python -m backend.scripts.train_model --ticker SPY --days 756
+  python -m backend.scripts.train_model --tickers SPY,QQQ,IWM --days 756
 
   756 calendar days ≈ 3 years of trading data (252 trading days/year).
   Minimum recommended: 504 days (2 years).
+
+  Multi-ticker training concatenates per-ticker rows after a chronological
+  train/test split PER TICKER — never across tickers — to preserve the
+  no-lookahead invariant within each symbol.
 """
 
 from __future__ import annotations
@@ -39,44 +43,55 @@ logger = logging.getLogger("train_model")
 
 # ── Data loading ─────────────────────────────────────────────────────────────
 
-def load_training_data(ticker: str, days: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Fetch historical OHLCV and compute features for all bars.
-
-    Returns:
-        (features_df, ohlcv_df) — features aligned with OHLCV index.
-    """
+def _load_single_ticker(
+    ticker: str, days: int
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Fetch OHLCV + rolling features for a single ticker."""
     from backend.core.data_fetcher import fetch_ohlcv
-    from backend.core.feature_engineering import build_features, feature_row_to_dataframe
+    from backend.core.feature_engineering import (
+        _MIN_ROWS,
+        build_features,
+        feature_row_to_dataframe,
+    )
 
     logger.info("Fetching %d days of OHLCV data for %s...", days, ticker)
     ohlcv = fetch_ohlcv(ticker=ticker, days=days)
-    logger.info("Got %d bars.", len(ohlcv))
+    logger.info("[%s] Got %d bars.", ticker, len(ohlcv))
 
-    # Build features for each bar using a rolling window
-    # Start at index 30 (minimum rows required by build_features)
-    MIN_ROWS = 30
     feature_rows = []
-    valid_dates = []
-
-    for i in range(MIN_ROWS, len(ohlcv)):
+    for i in range(_MIN_ROWS, len(ohlcv)):
         window = ohlcv.iloc[:i + 1]
         try:
             row = build_features(window)
             df = feature_row_to_dataframe(row)
             df.index = [ohlcv.index[i]]
             feature_rows.append(df)
-            valid_dates.append(ohlcv.index[i])
         except Exception as exc:
-            logger.warning("Skipping bar %s: %s", ohlcv.index[i], exc)
+            logger.warning("[%s] Skipping bar %s: %s", ticker, ohlcv.index[i], exc)
 
     if not feature_rows:
-        logger.error("No valid feature rows computed — insufficient data.")
+        logger.error("[%s] No valid feature rows — insufficient data.", ticker)
         sys.exit(1)
 
     features_df = pd.concat(feature_rows)
-    logger.info("Computed features for %d bars.", len(features_df))
+    logger.info("[%s] Computed features for %d bars.", ticker, len(features_df))
     return features_df, ohlcv
+
+
+def load_training_data(
+    tickers: list[str], days: int
+) -> list[tuple[str, pd.DataFrame, pd.DataFrame]]:
+    """
+    Fetch OHLCV + compute features for every ticker in `tickers`.
+
+    Returns:
+        List of (ticker, features_df, ohlcv_df) tuples — one per ticker,
+        each chronologically contiguous on its own index. The caller MUST
+        split each tuple chronologically before concatenating across tickers;
+        a global concat-then-split would reintroduce lookahead bias at ticker
+        boundaries.
+    """
+    return [(t, *_load_single_ticker(t, days)) for t in tickers]
 
 
 # ── Label creation ────────────────────────────────────────────────────────────
@@ -270,8 +285,12 @@ def main() -> None:
         )
     )
     parser.add_argument(
-        "--ticker", required=True,
-        help="Equity ticker symbol to train on, e.g. SPY",
+        "--tickers", default=None,
+        help="Comma-separated tickers to train on, e.g. SPY,QQQ,IWM",
+    )
+    parser.add_argument(
+        "--ticker", default=None,
+        help="(Deprecated) Single ticker. Prefer --tickers.",
     )
     parser.add_argument(
         "--days", type=int, default=756,
@@ -300,15 +319,45 @@ def main() -> None:
         logger.error("ALPACA_API_KEY and ALPACA_SECRET_KEY must be set.")
         sys.exit(1)
 
-    # ── Pipeline ────────────────────────────────────────────────────────────
-    features_df, ohlcv = load_training_data(args.ticker, args.days)
-    labels = create_labels(ohlcv, features_df, forward_days=args.forward_days)
+    # ── Resolve ticker list ─────────────────────────────────────────────────
+    if args.tickers:
+        tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
+    elif args.ticker:
+        tickers = [args.ticker.strip().upper()]
+    else:
+        parser.error("Provide --tickers SPY,QQQ,IWM (or legacy --ticker SPY).")
+    if not tickers:
+        parser.error("Empty ticker list after parsing.")
 
-    # Align features to valid label indices
-    features_df = features_df.reindex(labels.index)
+    logger.info("Training on %d ticker(s): %s", len(tickers), ", ".join(tickers))
 
-    X_train, X_test, y_train, y_test = time_based_split(
-        features_df, labels, test_fraction=args.test_fraction
+    # ── Per-ticker load + chronological split, then concatenate ─────────────
+    X_train_parts: list[pd.DataFrame] = []
+    X_test_parts: list[pd.DataFrame] = []
+    y_train_parts: list[pd.Series] = []
+    y_test_parts: list[pd.Series] = []
+
+    for ticker, features_df, ohlcv in load_training_data(tickers, args.days):
+        labels = create_labels(ohlcv, features_df, forward_days=args.forward_days)
+        features_df = features_df.reindex(labels.index)
+
+        logger.info("[%s] Splitting %d feature rows chronologically.", ticker, len(features_df))
+        X_tr, X_te, y_tr, y_te = time_based_split(
+            features_df, labels, test_fraction=args.test_fraction
+        )
+        X_train_parts.append(X_tr)
+        X_test_parts.append(X_te)
+        y_train_parts.append(y_tr)
+        y_test_parts.append(y_te)
+
+    X_train = pd.concat(X_train_parts)
+    X_test = pd.concat(X_test_parts)
+    y_train = pd.concat(y_train_parts)
+    y_test = pd.concat(y_test_parts)
+
+    logger.info(
+        "Combined train=%d rows / test=%d rows across %d ticker(s).",
+        len(X_train), len(X_test), len(tickers),
     )
 
     model = train_and_evaluate(X_train, X_test, y_train, y_test, min_auc=args.min_auc)

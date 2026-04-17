@@ -8,6 +8,7 @@ various failure modes.
 
 from __future__ import annotations
 
+import math
 import os
 from unittest.mock import MagicMock, patch
 
@@ -18,7 +19,7 @@ import pytest
 
 # ── Shared test fixtures ──────────────────────────────────────────────────────
 
-def _make_ohlcv(rows: int = 60) -> pd.DataFrame:
+def _make_ohlcv(rows: int = 110) -> pd.DataFrame:
     """Synthetic OHLCV DataFrame for testing."""
     idx = pd.date_range("2024-01-01", periods=rows, freq="B")
     close = 500.0 + np.arange(rows, dtype=float)
@@ -46,6 +47,10 @@ def _make_feature_df():
         volume_deviation=0.05,
         vwap_distance=0.002,
         prior_day_return=0.003,
+        hurst_exponent=0.48,
+        ou_log_half_life=math.log1p(12.0),
+        ou_zscore=-0.5,
+        regime_label=0.0,
     )
     return row, feature_row_to_dataframe(row)
 
