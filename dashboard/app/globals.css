@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * CSS custom properties are injected by next/font/google via --font-mono
+ * and --font-sans variables on <body>. Tailwind reads them via the fontFamily
+ * config in tailwind.config.ts. No hardcoded hex values here.
+ */

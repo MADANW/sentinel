@@ -1,0 +1,42 @@
+# Direct dependencies only — transitive deps are resolved by pip-compile.
+#
+# To regenerate requirements.txt with verified hashes:
+#   pip install pip-tools
+#   pip-compile backend/requirements.in --generate-hashes --output-file backend/requirements.txt
+#
+# After regeneration, install with hash verification:
+#   pip install --require-hashes -r backend/requirements.txt
+
+# Trading
+alpaca-py==0.25.0
+
+# AI
+anthropic==0.26.0
+
+# Data / signals
+pandas==2.2.1
+numpy==1.26.4
+
+# ML
+xgboost==2.0.3
+scikit-learn==1.5.2
+
+# Environment
+python-dotenv==1.0.1
+
+# Logging / observability
+structlog==24.1.0
+
+# Supabase
+supabase==2.4.3
+
+# HTTP (used by alpaca-py and anthropic)
+httpx==0.27.0
+
+# Testing
+pytest==9.0.3
+pytest-asyncio==1.3.0
+
+# Transitive pins to address CVEs
+pygments==2.20.0
+requests==2.33.0

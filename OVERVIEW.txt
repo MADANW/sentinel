@@ -68,12 +68,26 @@ TEST COVERAGE
 Sprint 1    22 tests   risk engine + bias validator
 Sprint 2    20 tests   signals, pipeline, order executor, E2E
 Sprint 3    11 tests   journal
-Total       53 passing
+Sprint F    17 tests   Hurst, OU, regime features
+Other       69 tests   feature engineering, model, monte carlo, morning pipeline
+Total       139 passing
+
+
+ML PIPELINE (Sprint F)
+----------------------
+XGBoost classifier trained on SPY + QQQ + IWM (756 days, per-ticker
+chronological split then concat). 12 features: 8 legacy momentum/volume
+indicators plus 4 regime features — Hurst exponent, log(1 + OU half-life),
+OU z-score, and a derived regime_label (trend / random walk / range).
+
+Retrain:
+  python -m backend.scripts.train_model --tickers SPY,QQQ,IWM --days 756
+
+Current model: AUC-ROC 0.5623 (above 0.55 minimum gate).
 
 
 WHAT'S LEFT
 -----------
-No main entrypoint yet. The individual components all work and are tested,
-but nothing runs the full flow on a schedule. Next step: a main.py or cron
-job that calls run_morning_pipeline() -> validate_order() ->
-submit_bracket_order() -> log_trade() in sequence each morning.
+- Sprint E: paper-trading loop / CODEOWNERS (deferred)
+- MT5 bridge in mql5/ (deferred)
+- Schedule the morning pipeline (cron / systemd timer)

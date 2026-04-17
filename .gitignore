@@ -57,6 +57,7 @@ node_modules/
 .next/
 out/
 .vercel/
+dashboard/.turbo/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -88,6 +89,17 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# ============================================================
+# ML MODEL ARTIFACTS
+# ============================================================
+# classifier.pkl is a binary artifact — never commit (gitignored).
+# classifier.sha256 IS committed — it is the integrity anchor for the pkl.
+# NEVER accept classifier.pkl from an external source (see BRAIN.md).
+models/classifier.pkl
+models/*.pkl
+models/*.tmp
+*.pkl
 
 # ============================================================
 # DEPLOYMENT

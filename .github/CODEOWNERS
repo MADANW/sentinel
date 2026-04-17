@@ -1,0 +1,12 @@
+# CODEOWNERS — all files require review from the repo owner.
+#
+# To activate:
+#   1. Replace @OWNER_PLACEHOLDER with your GitHub username.
+#   2. In GitHub repo settings → Branches → Add rule for "main":
+#      - Require pull request before merging
+#      - Require all status checks to pass
+#      - Do not allow bypassing required checks (applies to admins too)
+#
+# See SECURITY.md → Branch Protection Policy for setup instructions.
+
+* @OWNER_PLACEHOLDER
