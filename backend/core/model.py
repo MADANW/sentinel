@@ -119,9 +119,9 @@ def _load_model(model_path: str | None = None, hash_path: str | None = None):
 
     _verify_model_integrity(mp, hp)
 
-    import pickle  # noqa: S403  # security: pickle use is hash-verified before load
+    import pickle  # noqa: S403  # nosec B403 - hash-verified before load
     with open(mp, "rb") as f:
-        model = pickle.load(f)  # noqa: S301  # hash-verified before load
+        model = pickle.load(f)  # noqa: S301  # nosec B301 - hash-verified before load
 
     logger.info("Model loaded successfully from %r", mp)
     return model
