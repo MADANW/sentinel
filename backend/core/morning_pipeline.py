@@ -213,7 +213,7 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
 
     # ── Stage 1: Data fetching ───────────────────────────────────────────────
     try:
-        ohlcv = fetch_ohlcv(ticker, days=60)
+        ohlcv = fetch_ohlcv(ticker, days=150)
     except DataFetcherError as exc:
         logger.error("OHLCV fetch failed — no trade today: %s", exc)
         return None
