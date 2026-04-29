@@ -120,7 +120,7 @@ def main(ticker: str) -> int:
     from backend.core.morning_pipeline import PipelineError, run_morning_pipeline
 
     try:
-        bias = run_morning_pipeline(ticker)
+        pipeline_result = run_morning_pipeline(ticker)
     except PipelineError as exc:
         logger.critical("Pipeline configuration error: %s", exc)
         return 1
@@ -128,11 +128,20 @@ def main(ticker: str) -> int:
         logger.critical("Invalid input: %s", exc)
         return 1
 
+    bias = pipeline_result.bias
     if bias is None:
         logger.info("No trade today — pipeline returned no signal.")
-        # Log the pipeline run (gate details not available at this level — morning_pipeline
-        # logs gate-specific reasons; here we record the top-level outcome only)
-        _log_pipeline_run_safe(ticker=ticker, trade_submitted=False, skip_reason="gate_failed")
+        _log_pipeline_run_safe(
+            ticker=ticker,
+            trade_submitted=False,
+            skip_reason=pipeline_result.skip_reason or "gate_failed",
+            ml_probability=pipeline_result.ml_probability,
+            ml_signal=pipeline_result.ml_signal,
+            mc_hit_rate=pipeline_result.mc_hit_rate,
+            mc_passed=pipeline_result.mc_passed,
+            claude_approved=pipeline_result.claude_approved,
+            claude_reason=pipeline_result.claude_reason,
+        )
         return 0
 
     logger.info(
@@ -222,6 +231,12 @@ def main(ticker: str) -> int:
         ticker=ticker,
         trade_submitted=result.success,
         skip_reason=None if result.success else result.error,
+        ml_probability=pipeline_result.ml_probability,
+        ml_signal=pipeline_result.ml_signal,
+        mc_hit_rate=pipeline_result.mc_hit_rate,
+        mc_passed=pipeline_result.mc_passed,
+        claude_approved=pipeline_result.claude_approved,
+        claude_reason=pipeline_result.claude_reason,
     )
 
     return 0
@@ -232,6 +247,12 @@ def _log_pipeline_run_safe(
     ticker: str,
     trade_submitted: bool,
     skip_reason: str | None,
+    ml_probability: float | None = None,
+    ml_signal: str | None = None,
+    mc_hit_rate: float | None = None,
+    mc_passed: bool | None = None,
+    claude_approved: bool | None = None,
+    claude_reason: str | None = None,
 ) -> None:
     """
     Log the pipeline outcome to pipeline_runs. Non-fatal — never raises.
@@ -243,6 +264,12 @@ def _log_pipeline_run_safe(
             ticker=ticker,
             trade_submitted=trade_submitted,
             skip_reason=skip_reason,
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+            mc_hit_rate=mc_hit_rate,
+            mc_passed=mc_passed,
+            claude_approved=claude_approved,
+            claude_reason=claude_reason,
         )
     except Exception as exc:
         # Pipeline log failure must not abort — it is observability only

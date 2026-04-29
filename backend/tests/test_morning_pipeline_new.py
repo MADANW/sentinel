@@ -116,19 +116,19 @@ class TestHappyPaths:
 
     def test_full_happy_path_bullish(self):
         result = self._run_pipeline(ml_prob=0.75)
-        assert result is not None
-        assert result.direction == "bullish"
-        assert result.confidence == 0.75
-        assert result.is_actionable is True
+        assert result.bias is not None
+        assert result.bias.direction == "bullish"
+        assert result.bias.confidence == 0.75
+        assert result.bias.is_actionable is True
 
     def test_full_happy_path_bearish(self):
         result = self._run_pipeline(ml_prob=0.30)
-        assert result is not None
-        assert result.direction == "bearish"
+        assert result.bias is not None
+        assert result.bias.direction == "bearish"
 
     def test_ticker_normalized_to_uppercase(self):
         result = self._run_pipeline(ml_prob=0.75, ticker="spy")
-        assert result is not None  # lowercase ticker accepted, normalized
+        assert result.bias is not None  # lowercase ticker accepted, normalized
 
     def test_bias_reasoning_comes_from_claude(self):
         from backend.core.morning_pipeline import run_morning_pipeline
@@ -159,8 +159,8 @@ class TestHappyPaths:
                                         mock_claude.return_value.messages.create.return_value = claude_resp
                                         result = run_morning_pipeline("SPY")
 
-        assert result is not None
-        assert result.reasoning == reason
+        assert result.bias is not None
+        assert result.bias.reasoning == reason
 
 
 # ── Gate failure tests ────────────────────────────────────────────────────────
@@ -222,48 +222,58 @@ class TestGateFailures:
 
     def test_ml_dead_zone_returns_none(self):
         result = self._run_with_overrides(ml_prob=0.50)
-        assert result is None
+        assert result.bias is None
+        assert result.ml_signal == "dead_zone"
+        assert result.skip_reason and result.skip_reason.startswith("ml_dead_zone")
 
     def test_ml_gate_exactly_at_threshold_passes(self):
         result = self._run_with_overrides(ml_prob=0.60)
-        assert result is not None
-        assert result.direction == "bullish"
+        assert result.bias is not None
+        assert result.bias.direction == "bullish"
 
     def test_mc_gate_fails_returns_none(self):
         result = self._run_with_overrides(mc_hit_rate=0.40)
-        assert result is None
+        assert result.bias is None
+        assert result.mc_passed is False
+        assert result.skip_reason and result.skip_reason.startswith("mc_hit_rate_low")
 
     def test_claude_vetoes_returns_none(self):
         result = self._run_with_overrides(claude_approve=False)
-        assert result is None
+        assert result.bias is None
+        assert result.claude_approved is False
+        assert result.skip_reason and result.skip_reason.startswith("claude_veto")
 
     def test_ohlcv_fetch_fails_returns_none(self):
         from backend.core.data_fetcher import DataFetcherError
         result = self._run_with_overrides(
             ohlcv_side_effect=DataFetcherError("Alpaca error")
         )
-        assert result is None
+        assert result.bias is None
+        assert result.skip_reason and result.skip_reason.startswith("ohlcv_fetch_failed")
 
     def test_feature_engineering_fails_returns_none(self):
         from backend.core.feature_engineering import FeatureError
         result = self._run_with_overrides(
             feature_side_effect=FeatureError("NaN in features")
         )
-        assert result is None
+        assert result.bias is None
+        assert result.skip_reason and result.skip_reason.startswith("feature_engineering_failed")
 
     def test_model_tampering_returns_none(self):
         from backend.core.model import ModelTamperingError
         result = self._run_with_overrides(
             model_side_effect=ModelTamperingError("Hash mismatch")
         )
-        assert result is None
+        assert result.bias is None
+        assert result.skip_reason and result.skip_reason.startswith("model_tampering")
 
     def test_model_error_returns_none(self):
         from backend.core.model import ModelError
         result = self._run_with_overrides(
             model_side_effect=ModelError("Model file not found")
         )
-        assert result is None
+        assert result.bias is None
+        assert result.skip_reason and result.skip_reason.startswith("model_error")
 
     def test_claude_invalid_json_returns_none(self):
         from backend.core.morning_pipeline import run_morning_pipeline
@@ -292,7 +302,8 @@ class TestGateFailures:
                                         mock_claude.return_value.messages.create.return_value = bad_resp
                                         result = run_morning_pipeline("SPY")
 
-        assert result is None
+        assert result.bias is None
+        assert result.skip_reason and result.skip_reason.startswith("claude_invalid_response")
 
 
 # ── Ticker validation tests ───────────────────────────────────────────────────
