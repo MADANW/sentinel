@@ -37,7 +37,7 @@ Run on the remote box (`ssh madanw@<host>`):
    Confirm `models/classifier.pkl` + `models/classifier.sha256` exist.
 5. Smoke test the pipeline:
    ```bash
-   .venv/bin/python main.py --ticker SPY
+   .venv/bin/python main.py --tickers SPY,QQQ,IWM
    ```
    Confirm clean exit and a row appears in Supabase `pipeline_runs`.
 
@@ -63,7 +63,7 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/home/madanw/projects/algo-bot
 EnvironmentFile=/home/madanw/projects/algo-bot/.env
-ExecStart=/home/madanw/projects/algo-bot/.venv/bin/python main.py --ticker SPY
+ExecStart=/home/madanw/projects/algo-bot/.venv/bin/python main.py --tickers SPY,QQQ,IWM
 StandardOutput=append:/home/madanw/algo-bot.log
 StandardError=append:/home/madanw/algo-bot.log
 TimeoutStartSec=300

@@ -2,7 +2,7 @@
 main.py — Daily trading session orchestrator.
 
 Run once each morning before market open:
-  python main.py --ticker SPY
+  python main.py --tickers SPY,QQQ,IWM
 
 No user input required after invocation. All gates are automated.
 
@@ -103,7 +103,7 @@ def _compute_stop_distance(ticker: str) -> float:
     return stop_distance
 
 
-def main(ticker: str) -> int:
+def _run_one(ticker: str) -> int:
     """
     Run the full morning pipeline for a single ticker.
 
@@ -111,12 +111,6 @@ def main(ticker: str) -> int:
         0 — Success (trade submitted or gates failed cleanly).
         1 — Unrecoverable error (missing config, infrastructure failure).
     """
-    from backend.core.risk_engine import assert_constants_unchanged
-
-    # ── Startup integrity check ──────────────────────────────────────────────
-    assert_constants_unchanged()
-
-    # ── Run morning pipeline ─────────────────────────────────────────────────
     from backend.core.morning_pipeline import PipelineError, run_morning_pipeline
 
     try:
@@ -242,6 +236,26 @@ def main(ticker: str) -> int:
     return 0
 
 
+def main(tickers: list[str]) -> int:
+    """
+    Run pipeline for each ticker. Startup integrity check runs once.
+
+    Returns worst exit code: 1 if any ticker hit unrecoverable error, else 0.
+    """
+    from backend.core.risk_engine import assert_constants_unchanged
+
+    assert_constants_unchanged()
+
+    worst = 0
+    for ticker in tickers:
+        logger.info("=== Starting pipeline for %s ===", ticker)
+        rc = _run_one(ticker)
+        if rc != 0:
+            worst = rc
+        logger.info("=== Finished pipeline for %s (rc=%d) ===", ticker, rc)
+    return worst
+
+
 def _log_pipeline_run_safe(
     *,
     ticker: str,
@@ -281,9 +295,21 @@ if __name__ == "__main__":
         description="algo-bot morning pipeline — runs once per trading session."
     )
     parser.add_argument(
+        "--tickers",
+        help="Comma-separated tickers, e.g. SPY,QQQ,IWM",
+    )
+    parser.add_argument(
         "--ticker",
-        required=True,
-        help="Ticker symbol to trade, e.g. SPY",
+        help="Single ticker (legacy alias for --tickers).",
     )
     args = parser.parse_args()
-    sys.exit(main(ticker=args.ticker))
+
+    raw = args.tickers or args.ticker
+    if not raw:
+        parser.error("must provide --tickers or --ticker")
+
+    ticker_list = [t.strip().upper() for t in raw.split(",") if t.strip()]
+    if not ticker_list:
+        parser.error("ticker list is empty")
+
+    sys.exit(main(tickers=ticker_list))
