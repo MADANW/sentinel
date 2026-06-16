@@ -26,6 +26,35 @@ export interface Trade {
   bias_reasoning: string | null
 }
 
+export interface EABacktest {
+  id: string
+  imported_at: string
+
+  ea_name: string
+  source_file: string
+  symbol: string
+  period: string | null
+
+  initial_deposit: number | null
+  currency: string | null
+  leverage: string | null
+
+  total_net_profit: number | null
+  gross_profit: number | null
+  gross_loss: number | null
+  profit_factor: number | null
+  recovery_factor: number | null
+  sharpe_ratio: number | null
+  expected_payoff: number | null
+  equity_dd_pct: number | null
+
+  total_trades: number | null
+  profit_trades: number | null
+  loss_trades: number | null
+
+  ea_params: Record<string, string>
+}
+
 export interface PipelineRun {
   id: string
   created_at: string

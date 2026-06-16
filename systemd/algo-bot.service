@@ -1,0 +1,16 @@
+[Unit]
+Description=Algo-bot morning pipeline (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/madanw/projects/algo-bot
+EnvironmentFile=/home/madanw/projects/algo-bot/.env
+ExecStart=/home/madanw/projects/algo-bot/.venv/bin/python main.py --tickers SPY,QQQ,IWM
+StandardOutput=append:/home/madanw/algo-bot.log
+StandardError=append:/home/madanw/algo-bot.log
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

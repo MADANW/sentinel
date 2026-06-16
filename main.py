@@ -112,6 +112,7 @@ def _run_one(ticker: str) -> int:
         1 — Unrecoverable error (missing config, infrastructure failure).
     """
     from backend.core.morning_pipeline import PipelineError, run_morning_pipeline
+    from backend.core.bias_writer import write_bias_file
 
     try:
         pipeline_result = run_morning_pipeline(ticker)
@@ -121,6 +122,12 @@ def _run_one(ticker: str) -> int:
     except ValueError as exc:
         logger.critical("Invalid input: %s", exc)
         return 1
+
+    # Write bias to shared file for MT5 EA consumption (non-fatal on failure)
+    try:
+        write_bias_file(pipeline_result.bias)
+    except OSError as exc:
+        logger.warning("Bias file write failed (non-fatal): %s", exc)
 
     bias = pipeline_result.bias
     if bias is None:
