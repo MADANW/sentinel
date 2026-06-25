@@ -22,7 +22,7 @@ xgboost==2.0.3
 scikit-learn==1.5.2
 
 # Environment
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 
 # Logging / observability
 structlog==24.1.0
@@ -40,3 +40,6 @@ pytest-asyncio==1.3.0
 # Transitive pins to address CVEs
 pygments==2.20.0
 requests==2.33.0
+idna==3.15
+urllib3==2.7.0
+pyjwt==2.13.0

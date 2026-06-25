@@ -281,7 +281,7 @@ def main() -> None:
         description=(
             "Train and serialize the XGBoost trading classifier.\n\n"
             "IMPORTANT: Uses time-based train/test split to prevent lookahead bias.\n"
-            "Minimum recommended days: 504 (2 years). Ideal: 756 (3 years)."
+            "Minimum recommended days: 504 (2 years). Ideal: 1008 (4 years)."
         )
     )
     parser.add_argument(
@@ -293,8 +293,8 @@ def main() -> None:
         help="(Deprecated) Single ticker. Prefer --tickers.",
     )
     parser.add_argument(
-        "--days", type=int, default=756,
-        help="Calendar days of historical data to fetch (default: 756 ≈ 3 years)",
+        "--days", type=int, default=1008,
+        help="Calendar days of historical data to fetch (default: 1008 ≈ 4 years)",
     )
     parser.add_argument(
         "--forward-days", type=int, default=5,

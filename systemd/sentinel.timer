@@ -1,0 +1,10 @@
+[Unit]
+Description=Fire sentinel weekdays 09:45 America/New_York
+
+[Timer]
+OnCalendar=Mon..Fri 09:45 America/New_York
+Persistent=false
+Unit=sentinel.service
+
+[Install]
+WantedBy=timers.target

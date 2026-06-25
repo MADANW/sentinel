@@ -1,5 +1,5 @@
 /**
- * types.ts — Supabase row type definitions for algo-bot dashboard.
+ * types.ts — Supabase row type definitions for sentinel dashboard.
  *
  * All types are derived from the database schema in supabase/migrations/.
  * Use these types for all Supabase query results — never use `any`.
@@ -24,6 +24,35 @@ export interface Trade {
   alpaca_order_id: string | null
   bias_confidence: number | null
   bias_reasoning: string | null
+}
+
+export interface EABacktest {
+  id: string
+  imported_at: string
+
+  ea_name: string
+  source_file: string
+  symbol: string
+  period: string | null
+
+  initial_deposit: number | null
+  currency: string | null
+  leverage: string | null
+
+  total_net_profit: number | null
+  gross_profit: number | null
+  gross_loss: number | null
+  profit_factor: number | null
+  recovery_factor: number | null
+  sharpe_ratio: number | null
+  expected_payoff: number | null
+  equity_dd_pct: number | null
+
+  total_trades: number | null
+  profit_trades: number | null
+  loss_trades: number | null
+
+  ea_params: Record<string, string>
 }
 
 export interface PipelineRun {

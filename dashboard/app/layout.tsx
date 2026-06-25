@@ -17,7 +17,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'algo-bot',
+  title: 'Sentinel',
   description: 'Personal trading dashboard',
 }
 

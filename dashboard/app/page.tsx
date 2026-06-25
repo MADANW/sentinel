@@ -1,11 +1,12 @@
 import { createServerClient } from '@/lib/supabase'
 import { isMarketOpen } from '@/lib/market'
-import type { Trade, PipelineRun } from '@/lib/types'
+import type { Trade, PipelineRun, EABacktest } from '@/lib/types'
 import Header from '@/components/Header'
 import KillSwitchBanner from '@/components/KillSwitchBanner'
 import SummaryStrip from '@/components/SummaryStrip'
 import PipelineGates from '@/components/PipelineGates'
 import TradeTable from '@/components/TradeTable'
+import EABacktestTable from '@/components/EABacktestTable'
 
 // Always fetch fresh data — no caching for a live trading dashboard
 export const revalidate = 0
@@ -47,11 +48,35 @@ async function getLatestPipelineRun(): Promise<PipelineRun | null> {
   return data as PipelineRun | null
 }
 
-export default async function Dashboard() {
-  // Parallel server-side fetches
-  const [trades, latestRun] = await Promise.all([
+async function getEABacktests(): Promise<EABacktest[]> {
+  const supabase = createServerClient()
+
+  const { data, error } = await supabase
+    .from('ea_backtests')
+    .select('*')
+    .order('imported_at', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    console.error('Failed to fetch EA backtests:', error.message)
+    return []
+  }
+  return (data ?? []) as EABacktest[]
+}
+
+interface PageProps {
+  searchParams: Promise<{ tab?: string }>
+}
+
+export default async function Dashboard({ searchParams }: PageProps) {
+  const { tab } = await searchParams
+  const activeTab = tab === 'ea' ? 'ea' : 'trades'
+
+  // Parallel server-side fetches — always fetch all so switching tabs is instant
+  const [trades, latestRun, eaBacktests] = await Promise.all([
     getTrades(),
     getLatestPipelineRun(),
+    getEABacktests(),
   ])
 
   // Derived values
@@ -83,7 +108,36 @@ export default async function Dashboard() {
           halted={halted}
         />
         <PipelineGates run={latestRun} />
-        <TradeTable trades={trades} />
+
+        {/* Tab bar */}
+        <div className="mb-4 flex gap-1 border-b border-gray-800">
+          <a
+            href="/"
+            className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+              activeTab === 'trades'
+                ? 'border-b-2 border-blue-500 text-blue-400'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            Trade journal
+          </a>
+          <a
+            href="/?tab=ea"
+            className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+              activeTab === 'ea'
+                ? 'border-b-2 border-blue-500 text-blue-400'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            MT5 backtests
+          </a>
+        </div>
+
+        {activeTab === 'trades' ? (
+          <TradeTable trades={trades} />
+        ) : (
+          <EABacktestTable backtests={eaBacktests} />
+        )}
       </div>
     </main>
   )

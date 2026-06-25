@@ -20,6 +20,7 @@ import logging
 import math
 import os
 import re as _re
+from dataclasses import dataclass
 
 import anthropic
 
@@ -51,6 +52,19 @@ _TICKER_PATTERN = _re.compile(r'^[A-Z]{1,5}$')
 
 class PipelineError(RuntimeError):
     """Raised when the pipeline cannot run due to configuration or API failure."""
+
+
+@dataclass
+class PipelineResult:
+    """Outcome of run_morning_pipeline, carrying gate diagnostics for logging."""
+    bias: TradingBias | None
+    skip_reason: str | None = None
+    ml_probability: float | None = None
+    ml_signal: str | None = None
+    mc_hit_rate: float | None = None
+    mc_passed: bool | None = None
+    claude_approved: bool | None = None
+    claude_reason: str | None = None
 
 
 # ── Ticker validation ─────────────────────────────────────────────────────────
@@ -191,7 +205,7 @@ def _call_claude_review(
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
-def run_morning_pipeline(ticker: str) -> TradingBias | None:
+def run_morning_pipeline(ticker: str) -> PipelineResult:
     """
     Full ML-first morning trading pipeline.
 
@@ -199,8 +213,8 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
         ticker: Equity ticker symbol, e.g. "SPY". Case-insensitive; normalized to uppercase.
 
     Returns:
-        A validated TradingBias if all gates pass (ML, Monte Carlo, Claude review).
-        None if any gate fails — log entries explain the reason.
+        PipelineResult with bias=TradingBias on full pass, or bias=None with
+        skip_reason + populated gate fields explaining where it stopped.
 
     Raises:
         PipelineError: On missing API keys or Claude API credential errors.
@@ -213,10 +227,10 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
 
     # ── Stage 1: Data fetching ───────────────────────────────────────────────
     try:
-        ohlcv = fetch_ohlcv(ticker, days=60)
+        ohlcv = fetch_ohlcv(ticker, days=150)
     except DataFetcherError as exc:
         logger.error("OHLCV fetch failed — no trade today: %s", exc)
-        return None
+        return PipelineResult(bias=None, skip_reason=f"ohlcv_fetch_failed: {exc}")
 
     # Headlines are optional context — empty list is acceptable
     headlines = fetch_headlines(ticker, limit=10)
@@ -227,28 +241,35 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
         features_df = feature_row_to_dataframe(feature_row)
     except FeatureError as exc:
         logger.error("Feature engineering failed — no trade today: %s", exc)
-        return None
+        return PipelineResult(bias=None, skip_reason=f"feature_engineering_failed: {exc}")
 
     # ── Stage 3: ML gate ─────────────────────────────────────────────────────
     try:
         ml_probability = predict_direction(features_df)
     except ModelTamperingError as exc:
         logger.critical("MODEL TAMPERING DETECTED — no trade today: %s", exc)
-        return None
+        return PipelineResult(bias=None, skip_reason=f"model_tampering: {exc}")
     except ModelError as exc:
         logger.error("Model error — no trade today: %s", exc)
-        return None
+        return PipelineResult(bias=None, skip_reason=f"model_error: {exc}")
 
     if ml_probability >= _ML_BULLISH_THRESHOLD:
         direction = "bullish"
+        ml_signal = "bullish"
     elif ml_probability <= _ML_BEARISH_THRESHOLD:
         direction = "bearish"
+        ml_signal = "bearish"
     else:
         logger.info(
             "ML gate: probability %.4f in dead zone [%.2f, %.2f] — no trade today.",
             ml_probability, _ML_BEARISH_THRESHOLD, _ML_BULLISH_THRESHOLD,
         )
-        return None
+        return PipelineResult(
+            bias=None,
+            skip_reason=f"ml_dead_zone: probability={ml_probability:.4f}",
+            ml_probability=ml_probability,
+            ml_signal="dead_zone",
+        )
 
     logger.info(
         "ML gate PASSED: direction=%s ml_probability=%.4f", direction, ml_probability
@@ -259,14 +280,26 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
         mc_result = _run_monte_carlo(ohlcv, direction)
     except MonteCarloError as exc:
         logger.error("Monte Carlo simulation failed — no trade today: %s", exc)
-        return None
+        return PipelineResult(
+            bias=None,
+            skip_reason=f"monte_carlo_failed: {exc}",
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+        )
 
     if mc_result.hit_target_rate < _MC_HIT_RATE_THRESHOLD:
         logger.info(
             "MC gate FAILED: hit_target_rate=%.4f < %.2f — no trade today.",
             mc_result.hit_target_rate, _MC_HIT_RATE_THRESHOLD,
         )
-        return None
+        return PipelineResult(
+            bias=None,
+            skip_reason=f"mc_hit_rate_low: {mc_result.hit_target_rate:.4f} < {_MC_HIT_RATE_THRESHOLD}",
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+            mc_hit_rate=mc_result.hit_target_rate,
+            mc_passed=False,
+        )
 
     logger.info(
         "MC gate PASSED: hit_target_rate=%.4f expected_pnl=%.3f%%",
@@ -280,16 +313,39 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
         raise  # credential/config errors propagate
     except ClaudeReviewError as exc:
         logger.error("Claude review response invalid — no trade today: %s", exc)
-        return None
+        return PipelineResult(
+            bias=None,
+            skip_reason=f"claude_invalid_response: {exc}",
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+            mc_hit_rate=mc_result.hit_target_rate,
+            mc_passed=True,
+        )
     except Exception as exc:
         logger.error("Claude review failed unexpectedly — no trade today: %s", exc)
-        return None
+        return PipelineResult(
+            bias=None,
+            skip_reason=f"claude_error: {exc}",
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+            mc_hit_rate=mc_result.hit_target_rate,
+            mc_passed=True,
+        )
 
     if not review.approve:
         logger.info(
             "Claude review VETOED trade: reason=%r — no trade today.", review.reason
         )
-        return None
+        return PipelineResult(
+            bias=None,
+            skip_reason=f"claude_veto: {review.reason}",
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+            mc_hit_rate=mc_result.hit_target_rate,
+            mc_passed=True,
+            claude_approved=False,
+            claude_reason=review.reason,
+        )
 
     logger.info("Claude review APPROVED: %r", review.reason)
 
@@ -305,4 +361,12 @@ def run_morning_pipeline(ticker: str) -> TradingBias | None:
         "Morning pipeline COMPLETE: direction=%s confidence=%.4f actionable=%s",
         bias.direction, bias.confidence, bias.is_actionable,
     )
-    return bias
+    return PipelineResult(
+        bias=bias,
+        ml_probability=ml_probability,
+        ml_signal=ml_signal,
+        mc_hit_rate=mc_result.hit_target_rate,
+        mc_passed=True,
+        claude_approved=True,
+        claude_reason=review.reason,
+    )

@@ -1,0 +1,16 @@
+[Unit]
+Description=Algo-bot morning pipeline (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/madanw/projects/sentinel
+EnvironmentFile=/home/madanw/projects/sentinel/.env
+ExecStart=/home/madanw/projects/sentinel/.venv/bin/python main.py --tickers SPY,QQQ,IWM
+StandardOutput=append:/home/madanw/sentinel.log
+StandardError=append:/home/madanw/sentinel.log
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

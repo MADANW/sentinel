@@ -2,7 +2,7 @@
 main.py — Daily trading session orchestrator.
 
 Run once each morning before market open:
-  python main.py --ticker SPY
+  python main.py --tickers SPY,QQQ,IWM
 
 No user input required after invocation. All gates are automated.
 
@@ -103,7 +103,7 @@ def _compute_stop_distance(ticker: str) -> float:
     return stop_distance
 
 
-def main(ticker: str) -> int:
+def _run_one(ticker: str) -> int:
     """
     Run the full morning pipeline for a single ticker.
 
@@ -111,16 +111,11 @@ def main(ticker: str) -> int:
         0 — Success (trade submitted or gates failed cleanly).
         1 — Unrecoverable error (missing config, infrastructure failure).
     """
-    from backend.core.risk_engine import assert_constants_unchanged
-
-    # ── Startup integrity check ──────────────────────────────────────────────
-    assert_constants_unchanged()
-
-    # ── Run morning pipeline ─────────────────────────────────────────────────
     from backend.core.morning_pipeline import PipelineError, run_morning_pipeline
+    from backend.core.bias_writer import write_bias_file
 
     try:
-        bias = run_morning_pipeline(ticker)
+        pipeline_result = run_morning_pipeline(ticker)
     except PipelineError as exc:
         logger.critical("Pipeline configuration error: %s", exc)
         return 1
@@ -128,11 +123,26 @@ def main(ticker: str) -> int:
         logger.critical("Invalid input: %s", exc)
         return 1
 
+    # Write bias to shared file for MT5 EA consumption (non-fatal on failure)
+    try:
+        write_bias_file(pipeline_result.bias)
+    except OSError as exc:
+        logger.warning("Bias file write failed (non-fatal): %s", exc)
+
+    bias = pipeline_result.bias
     if bias is None:
         logger.info("No trade today — pipeline returned no signal.")
-        # Log the pipeline run (gate details not available at this level — morning_pipeline
-        # logs gate-specific reasons; here we record the top-level outcome only)
-        _log_pipeline_run_safe(ticker=ticker, trade_submitted=False, skip_reason="gate_failed")
+        _log_pipeline_run_safe(
+            ticker=ticker,
+            trade_submitted=False,
+            skip_reason=pipeline_result.skip_reason or "gate_failed",
+            ml_probability=pipeline_result.ml_probability,
+            ml_signal=pipeline_result.ml_signal,
+            mc_hit_rate=pipeline_result.mc_hit_rate,
+            mc_passed=pipeline_result.mc_passed,
+            claude_approved=pipeline_result.claude_approved,
+            claude_reason=pipeline_result.claude_reason,
+        )
         return 0
 
     logger.info(
@@ -222,9 +232,35 @@ def main(ticker: str) -> int:
         ticker=ticker,
         trade_submitted=result.success,
         skip_reason=None if result.success else result.error,
+        ml_probability=pipeline_result.ml_probability,
+        ml_signal=pipeline_result.ml_signal,
+        mc_hit_rate=pipeline_result.mc_hit_rate,
+        mc_passed=pipeline_result.mc_passed,
+        claude_approved=pipeline_result.claude_approved,
+        claude_reason=pipeline_result.claude_reason,
     )
 
     return 0
+
+
+def main(tickers: list[str]) -> int:
+    """
+    Run pipeline for each ticker. Startup integrity check runs once.
+
+    Returns worst exit code: 1 if any ticker hit unrecoverable error, else 0.
+    """
+    from backend.core.risk_engine import assert_constants_unchanged
+
+    assert_constants_unchanged()
+
+    worst = 0
+    for ticker in tickers:
+        logger.info("=== Starting pipeline for %s ===", ticker)
+        rc = _run_one(ticker)
+        if rc != 0:
+            worst = rc
+        logger.info("=== Finished pipeline for %s (rc=%d) ===", ticker, rc)
+    return worst
 
 
 def _log_pipeline_run_safe(
@@ -232,6 +268,12 @@ def _log_pipeline_run_safe(
     ticker: str,
     trade_submitted: bool,
     skip_reason: str | None,
+    ml_probability: float | None = None,
+    ml_signal: str | None = None,
+    mc_hit_rate: float | None = None,
+    mc_passed: bool | None = None,
+    claude_approved: bool | None = None,
+    claude_reason: str | None = None,
 ) -> None:
     """
     Log the pipeline outcome to pipeline_runs. Non-fatal — never raises.
@@ -243,6 +285,12 @@ def _log_pipeline_run_safe(
             ticker=ticker,
             trade_submitted=trade_submitted,
             skip_reason=skip_reason,
+            ml_probability=ml_probability,
+            ml_signal=ml_signal,
+            mc_hit_rate=mc_hit_rate,
+            mc_passed=mc_passed,
+            claude_approved=claude_approved,
+            claude_reason=claude_reason,
         )
     except Exception as exc:
         # Pipeline log failure must not abort — it is observability only
@@ -251,12 +299,24 @@ def _log_pipeline_run_safe(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="algo-bot morning pipeline — runs once per trading session."
+        description="sentinel morning pipeline — runs once per trading session."
+    )
+    parser.add_argument(
+        "--tickers",
+        help="Comma-separated tickers, e.g. SPY,QQQ,IWM",
     )
     parser.add_argument(
         "--ticker",
-        required=True,
-        help="Ticker symbol to trade, e.g. SPY",
+        help="Single ticker (legacy alias for --tickers).",
     )
     args = parser.parse_args()
-    sys.exit(main(ticker=args.ticker))
+
+    raw = args.tickers or args.ticker
+    if not raw:
+        parser.error("must provide --tickers or --ticker")
+
+    ticker_list = [t.strip().upper() for t in raw.split(",") if t.strip()]
+    if not ticker_list:
+        parser.error("ticker list is empty")
+
+    sys.exit(main(tickers=ticker_list))

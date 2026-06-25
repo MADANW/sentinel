@@ -1,0 +1,17 @@
+[Unit]
+Description=Algo-bot position monitor — polls Alpaca fills and closes journal entries
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/madanw/projects/sentinel
+EnvironmentFile=/home/madanw/projects/sentinel/.env
+ExecStart=/home/madanw/projects/sentinel/.venv/bin/python -m backend.scripts.monitor
+Restart=on-failure
+RestartSec=60
+StandardOutput=append:/home/madanw/sentinel-monitor.log
+StandardError=append:/home/madanw/sentinel-monitor.log
+
+[Install]
+WantedBy=default.target
