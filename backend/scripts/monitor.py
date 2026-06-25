@@ -1,7 +1,7 @@
 """
 monitor.py — Position monitor: polls Alpaca for closed fills, updates journal.
 
-Runs as a long-lived process (managed by algo-bot-monitor.service). Polls every
+Runs as a long-lived process (managed by sentinel-monitor.service). Polls every
 POLL_INTERVAL_SECONDS for positions/orders that closed since the last check, then
 calls journal.close_trade() to update the Supabase record with fill price and P&L.
 
@@ -189,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s — %(message)s",
     )
 
-    parser = argparse.ArgumentParser(description="algo-bot position monitor")
+    parser = argparse.ArgumentParser(description="sentinel position monitor")
     parser.add_argument(
         "--once", action="store_true",
         help="Run a single poll then exit (for testing).",

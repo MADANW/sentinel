@@ -1,6 +1,6 @@
-# Running algo-bot — Operator Guide
+# Running Sentinel — Operator Guide
 
-End-to-end walkthrough for getting `algo-bot` running on your own machine: from cloning the repo to submitting paper trades and viewing them on the dashboard. Written for someone who has never run the bot before.
+End-to-end walkthrough for getting `sentinel` running on your own machine: from cloning the repo to submitting paper trades and viewing them on the dashboard. Written for someone who has never run the bot before.
 
 > **Safety first.** `TRADING_ENV=paper` is the default. Every step in this guide uses paper trading. Do not switch to `live` until you have watched several weeks of paper runs and read [SECURITY.md](SECURITY.md) end-to-end.
 
@@ -46,8 +46,8 @@ Training takes ~30 seconds on a laptop with 8 GB RAM. No GPU required.
 ## 2. Clone and install
 
 ```bash
-git clone https://github.com/MADANW/algo-bot.git
-cd algo-bot
+git clone https://github.com/MADANW/sentinel.git
+cd sentinel
 ```
 
 ### 2.1 Python virtualenv
@@ -280,7 +280,7 @@ Run once per trading day, after market open. Simplest cron:
 
 ```cron
 # Run at 09:35 ET every weekday (5 min after open, gives Alpaca time to stabilize)
-35 9 * * 1-5 cd /path/to/algo-bot && source .venv/bin/activate && set -a && source .env && set +a && python main.py --ticker SPY >> ~/algo-bot.log 2>&1
+35 9 * * 1-5 cd /path/to/sentinel && source .venv/bin/activate && set -a && source .env && set +a && python main.py --ticker SPY >> ~/sentinel.log 2>&1
 ```
 
 `macOS` users: `launchd` is more reliable than cron for machines that sleep. `systemd` timer on Linux is the nicest option.

@@ -1,4 +1,4 @@
-# 🧠 Project Brain — algo-bot
+# 🧠 Project Brain — Sentinel
 
 > Hybrid AI trading bot where you set the directional bias and the bot handles execution, sizing, and risk.
 
@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-algo-bot is a personal trading system built for a single operator. You provide a morning directional call (bullish/bearish/neutral); the bot queries Claude API for a confidence-weighted bias, validates it through a strict sanitizer, and executes bracket orders via Alpaca. A hardcoded risk engine enforces 1% risk/trade, a 2% daily loss kill switch, and a 3-trade daily cap — none of these limits are configurable at runtime.
+sentinel is a personal trading system built for a single operator. You provide a morning directional call (bullish/bearish/neutral); the bot queries Claude API for a confidence-weighted bias, validates it through a strict sanitizer, and executes bracket orders via Alpaca. A hardcoded risk engine enforces 1% risk/trade, a 2% daily loss kill switch, and a 3-trade daily cap — none of these limits are configurable at runtime.
 
 ---
 
@@ -60,8 +60,8 @@ algo-bot is a personal trading system built for a single operator. You provide a
 ### Sprint E — Paper Trading Loop
 
 - [x] `backend/scripts/monitor.py` — polls Alpaca closed orders every 60s; reconciles with open journal trades; calls `close_trade()` on fills; SIGTERM-safe; `--once` flag for testing
-- [x] `systemd/algo-bot.service` + `systemd/algo-bot.timer` — committed unit files (copy to `~/.config/systemd/user/`; see SCHEDULING.md)
-- [x] `systemd/algo-bot-monitor.service` — long-running monitor unit
+- [x] `systemd/sentinel.service` + `systemd/sentinel.timer` — committed unit files (copy to `~/.config/systemd/user/`; see SCHEDULING.md)
+- [x] `systemd/sentinel-monitor.service` — long-running monitor unit
 
 Deferred: CODEOWNERS.
 
@@ -74,18 +74,18 @@ Deferred: CODEOWNERS.
 
 Layer 3 (bias bridge) complete:
 - [x] `backend/core/bias_writer.py` — writes `{direction, confidence, reasoning, timestamp}` JSON atomically after each pipeline run
-- [x] `mql5/include/AlgoBotBias.mqh` — shared MQL5 include; `ReadAlgoBias()` reads + validates file age, returns false if absent/stale/neutral
+- [x] `mql5/include/SentinelBias.mqh` — shared MQL5 include; `ReadAlgoBias()` reads + validates file age, returns false if absent/stale/neutral
 - [x] Both EAs updated (v4.01 / v2.01) — bias gate added before entry; only trades in bias-confirmed direction
 - [x] `main.py` calls `write_bias_file()` after `run_morning_pipeline` (non-fatal on OSError)
 
-Setup: copy `algo-bot-bias.json` from `/tmp/` into MT5 Common Files folder (`%APPDATA%\MetaQuotes\Terminal\Common\Files\`), or set `BIAS_FILE_PATH` to write directly there.
+Setup: copy `sentinel-bias.json` from `/tmp/` into MT5 Common Files folder (`%APPDATA%\MetaQuotes\Terminal\Common\Files\`), or set `BIAS_FILE_PATH` to write directly there.
 
 ---
 
 ## Directory Structure
 
 ```
-algo-bot/
+sentinel/
 ├── backend/
 │   ├── core/
 │   │   ├── risk_engine.py      — Hardcoded risk constants + kill switch

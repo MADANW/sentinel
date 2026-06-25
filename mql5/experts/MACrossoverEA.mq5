@@ -6,7 +6,7 @@
 #property version   "2.01"
 
 #include <Trade\Trade.mqh>
-#include <AlgoBotBias.mqh>
+#include <SentinelBias.mqh>
 
 //--- Input Parameters
 input int      FastMA_Period     = 9;          // Fast MA Period
@@ -19,7 +19,7 @@ input int      TakeProfit        = 400;        // Take Profit in points
 input int      MagicNumber       = 12345;      // Unique EA identifier
 
 //--- Bias bridge
-input string   BiasFile          = "algo-bot-bias.json";  // Bias file name in MT5 Common Files
+input string   BiasFile          = "sentinel-bias.json";  // Bias file name in MT5 Common Files
 input double   MinBiasConfidence = 0.60;                  // Min confidence to trade
 
 //--- Global Variables
@@ -68,7 +68,7 @@ void OnTick()
   {
    if(!IsNewBar()) return;
 
-   // --- Bias gate: read algo-bot morning bias before any trade ---
+   // --- Bias gate: read sentinel morning bias before any trade ---
    string biasDir; double biasConf;
    if(!ReadAlgoBias(BiasFile, biasDir, biasConf)) return;
    if(biasConf < MinBiasConfidence)

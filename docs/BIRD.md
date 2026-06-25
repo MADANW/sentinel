@@ -1,6 +1,6 @@
 # BIRD.md — What Is This Project?
 
-A plain-English explanation of algo-bot for someone who has never seen it before.
+A plain-English explanation of Sentinel for someone who has never seen it before.
 
 ---
 
@@ -12,7 +12,7 @@ Every morning, a program runs automatically, looks at the stock market, asks an 
 
 ## What problem does it solve?
 
-Trading manually is emotional. You see a red day and panic-sell. You see green and get greedy. algo-bot removes you from the moment-to-moment decisions. You set the rules once (in code), and the machine follows them exactly, every single day, without fear or greed.
+Trading manually is emotional. You see a red day and panic-sell. You see green and get greedy. sentinel removes you from the moment-to-moment decisions. You set the rules once (in code), and the machine follows them exactly, every single day, without fear or greed.
 
 You still own the strategy. The bot just executes it.
 
@@ -141,7 +141,7 @@ These are two separate programs written in MQL5 (MetaTrader's scripting language
 
 ### How they connect to the Python bot (the bias bridge)
 
-Every morning after the Python pipeline runs, it writes a file called `algo-bot-bias.json` that looks like this:
+Every morning after the Python pipeline runs, it writes a file called `sentinel-bias.json` that looks like this:
 
 ```json
 {
@@ -212,7 +212,7 @@ Its accuracy (AUC-ROC: 0.5623) sounds low, but a perfect coin flip is 0.50. Anyt
 ## Directory map
 
 ```
-algo-bot/
+sentinel/
 │
 ├── main.py                       ← Run this every morning
 │
@@ -242,7 +242,7 @@ algo-bot/
 │   │   ├── bb_scalper-LS1.mq5   ← Same EA, larger lot size
 │   │   └── MACrossoverEA.mq5    ← MA Crossover forex EA
 │   ├── include/
-│   │   └── AlgoBotBias.mqh      ← Shared bias file reader (used by both EAs)
+│   │   └── SentinelBias.mqh      ← Shared bias file reader (used by both EAs)
 │   └── backtests/               ← MT5 Strategy Tester result files
 │
 ├── dashboard/                   ← Next.js web app (read-only UI)
@@ -251,9 +251,9 @@ algo-bot/
 │   └── migrations/              ← SQL schemas: trades, pipeline_runs, ea_backtests
 │
 ├── systemd/                     ← Copy to ~/.config/systemd/user/ on the server
-│   ├── algo-bot.service         ← Runs main.py once
-│   ├── algo-bot.timer           ← Fires weekdays at 9:45 AM ET
-│   └── algo-bot-monitor.service ← Keeps monitor.py running
+│   ├── sentinel.service         ← Runs main.py once
+│   ├── sentinel.timer           ← Fires weekdays at 9:45 AM ET
+│   └── sentinel-monitor.service ← Keeps monitor.py running
 │
 ├── models/
 │   ├── classifier.pkl           ← NOT committed (security). Generate locally.
@@ -273,7 +273,7 @@ algo-bot/
 
 | Time | What happens |
 |---|---|
-| 9:45 AM ET | `algo-bot.timer` fires `main.py` on the server |
+| 9:45 AM ET | `sentinel.timer` fires `main.py` on the server |
 | 9:45–9:46 | Pipeline runs: data → ML → Monte Carlo → Claude → order |
 | Throughout day | `monitor.py` polls every 60s for fills → closes journal entries |
 | Anytime | Dashboard at `localhost:3000` shows current state |

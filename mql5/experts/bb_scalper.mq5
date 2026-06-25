@@ -7,7 +7,7 @@
 #property version   "4.01"
 
 #include <Trade\Trade.mqh>
-#include <AlgoBotBias.mqh>
+#include <SentinelBias.mqh>
 
 //--- Input Parameters (Optimized from 3,625 pass optimization)
 input int      BB_Period       = 15;       // Bollinger Bands Period
@@ -26,7 +26,7 @@ input int      NY_Start        = 13;       // NY Session Hour (GMT)
 input int      NY_End          = 17;       // NY Session End Hour (GMT)
 
 //--- Bias bridge
-input string   BiasFile        = "algo-bot-bias.json";  // Bias file name in MT5 Common Files
+input string   BiasFile        = "sentinel-bias.json";  // Bias file name in MT5 Common Files
 input double   MinBiasConfidence = 0.60;                // Min confidence to trade
 
 //--- Global Variables
@@ -87,7 +87,7 @@ void OnTick()
    if(!IsNewBar())       return;
    if(!IsValidSession()) return;
 
-   // --- Bias gate: read algo-bot morning bias before any trade ---
+   // --- Bias gate: read sentinel morning bias before any trade ---
    string biasDir; double biasConf;
    if(!ReadAlgoBias(BiasFile, biasDir, biasConf)) return;
    if(biasConf < MinBiasConfidence)

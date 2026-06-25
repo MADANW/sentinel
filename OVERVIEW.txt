@@ -1,4 +1,4 @@
-algo-bot — Full Project Overview
+Sentinel — Full Project Overview
 =================================
 
 WHAT IT DOES
@@ -33,7 +33,7 @@ dashboard/  ->  Next.js page (P&L, trade table, kill switch status)
 
 FILES
 -----
-algo-bot/
+sentinel/
 ├── backend/core/
 │   ├── risk_engine.py        — Hardcoded limits + kill switch
 │   ├── bias_validator.py     — Claude response sanitizer

@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
-//|  AlgoBotBias.mqh — Read algo-bot morning bias from JSON file     |
+//|  SentinelBias.mqh — Read sentinel morning bias from JSON file     |
 //|                                                                  |
-//|  The Python morning pipeline writes /tmp/algo-bot-bias.json      |
+//|  The Python morning pipeline writes /tmp/sentinel-bias.json      |
 //|  (or BIAS_FILE_PATH) after each run. Copy or symlink that file   |
 //|  into MT5's Common Files folder so the EA can read it.           |
 //|                                                                  |
@@ -17,9 +17,9 @@
 //|    }                                                             |
 //|                                                                  |
 //|  Usage:                                                          |
-//|    #include <AlgoBotBias.mqh>                                    |
+//|    #include <SentinelBias.mqh>                                    |
 //|    string dir; double conf;                                      |
-//|    if(!ReadAlgoBias("algo-bot-bias.json", dir, conf)) return;    |
+//|    if(!ReadAlgoBias("sentinel-bias.json", dir, conf)) return;    |
 //+------------------------------------------------------------------+
 #ifndef ALGOBOT_BIAS_MQH
 #define ALGOBOT_BIAS_MQH
@@ -76,7 +76,7 @@ datetime ParseISOTimestamp(const string ts)
 //| Reads the bias file from MT5 Common Files folder.                 |
 //|                                                                   |
 //| Parameters:                                                       |
-//|   filename   — filename only, e.g. "algo-bot-bias.json"          |
+//|   filename   — filename only, e.g. "sentinel-bias.json"          |
 //|   direction  — out: "bullish", "bearish", or "neutral"           |
 //|   confidence — out: 0.0 – 1.0                                    |
 //|                                                                   |
@@ -94,7 +94,7 @@ bool ReadAlgoBias(const string filename, string &direction, double &confidence)
    int fh = FileOpen(filename, FILE_READ|FILE_TXT|FILE_COMMON|FILE_ANSI);
    if(fh == INVALID_HANDLE)
      {
-      Print("AlgoBotBias: file not found in Common Files: ", filename);
+      Print("SentinelBias: file not found in Common Files: ", filename);
       return false;
      }
 
@@ -115,7 +115,7 @@ bool ReadAlgoBias(const string filename, string &direction, double &confidence)
    // Validate timestamp freshness
    if(ts_val == "")
      {
-      Print("AlgoBotBias: missing timestamp in ", filename);
+      Print("SentinelBias: missing timestamp in ", filename);
       return false;
      }
 
@@ -125,19 +125,19 @@ bool ReadAlgoBias(const string filename, string &direction, double &confidence)
 
    if(age_seconds < 0 || age_seconds > BIAS_MAX_AGE_SECONDS)
      {
-      Print("AlgoBotBias: stale bias (age=", age_seconds, "s). Skipping trade.");
+      Print("SentinelBias: stale bias (age=", age_seconds, "s). Skipping trade.");
       return false;
      }
 
    if(dir_val == "" || dir_val == "neutral")
      {
-      Print("AlgoBotBias: direction=", (dir_val == "" ? "missing" : "neutral"), ". Skipping trade.");
+      Print("SentinelBias: direction=", (dir_val == "" ? "missing" : "neutral"), ". Skipping trade.");
       return false;
      }
 
    direction  = dir_val;
    confidence = conf_val;
-   Print("AlgoBotBias: direction=", direction, " confidence=", DoubleToString(confidence, 4),
+   Print("SentinelBias: direction=", direction, " confidence=", DoubleToString(confidence, 4),
          " age=", age_seconds, "s");
    return true;
   }

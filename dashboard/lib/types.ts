@@ -1,5 +1,5 @@
 /**
- * types.ts — Supabase row type definitions for algo-bot dashboard.
+ * types.ts — Supabase row type definitions for sentinel dashboard.
  *
  * All types are derived from the database schema in supabase/migrations/.
  * Use these types for all Supabase query results — never use `any`.

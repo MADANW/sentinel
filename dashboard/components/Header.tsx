@@ -18,7 +18,7 @@ export default function Header({ accountNumber, tradingEnv, marketOpen }: Header
       {/* Left: app name + account */}
       <div className="flex items-baseline gap-4">
         <h1 className="font-mono text-xl font-bold tracking-tight text-gray-100">
-          algo-bot
+          Sentinel
         </h1>
         {accountNumber !== '—' && (
           <span className="font-mono text-xs text-gray-500">#{accountNumber}</span>

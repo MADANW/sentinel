@@ -299,7 +299,7 @@ def _log_pipeline_run_safe(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="algo-bot morning pipeline — runs once per trading session."
+        description="sentinel morning pipeline — runs once per trading session."
     )
     parser.add_argument(
         "--tickers",

@@ -5,7 +5,7 @@ The MT5 EAs poll this file via MQL5 FileOpen/FileReadString before entering any 
 If the file is absent, stale (> BIAS_MAX_AGE_HOURS), or unreadable, the EA skips the trade.
 
 File location:
-  Default: /tmp/algo-bot-bias.json
+  Default: /tmp/sentinel-bias.json
   Override: set BIAS_FILE_PATH environment variable.
 
 File format (UTF-8 JSON, written atomically):
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # MT5 EAs reject bias files older than this
 BIAS_MAX_AGE_HOURS: int = 8
 
-_DEFAULT_PATH = Path("/tmp/algo-bot-bias.json")
+_DEFAULT_PATH = Path("/tmp/sentinel-bias.json")  # nosec B108 — intentional, non-sensitive JSON read by MT5
 
 
 def _bias_file_path() -> Path:

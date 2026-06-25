@@ -1,4 +1,4 @@
-# algo-bot
+# Sentinel
 
 Hybrid AI trading system. You make the directional call; the bot handles execution, sizing, and risk.
 
@@ -34,7 +34,7 @@ python main.py
 ## Project Structure
 
 ```
-algo-bot/
+sentinel/
 ├── backend/
 │   ├── core/
 │   │   ├── risk_engine.py      # Immutable risk constants + kill switch
@@ -87,7 +87,7 @@ See [SECURITY.md](docs/SECURITY.md) for the full threat model, secret rotation r
 
 ```bash
 # 1. Clone
-git clone https://github.com/<you>/algo-bot && cd algo-bot
+git clone https://github.com/<you>/sentinel && cd sentinel
 
 # 2. Python environment
 python -m venv .venv

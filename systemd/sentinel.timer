@@ -1,10 +1,10 @@
 [Unit]
-Description=Fire algo-bot weekdays 09:45 America/New_York
+Description=Fire sentinel weekdays 09:45 America/New_York
 
 [Timer]
 OnCalendar=Mon..Fri 09:45 America/New_York
 Persistent=false
-Unit=algo-bot.service
+Unit=sentinel.service
 
 [Install]
 WantedBy=timers.target

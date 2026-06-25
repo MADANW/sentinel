@@ -8,8 +8,8 @@ Run `main.py` weekdays at 09:45 America/New_York on a remote Ubuntu box via syst
 
 - Host: remote Ubuntu, SSH key auth working
 - User: `madanw` (non-root)
-- Repo path: `/home/madanw/projects/algo-bot`
-- Venv: `/home/madanw/projects/algo-bot/.venv`
+- Repo path: `/home/madanw/projects/sentinel`
+- Venv: `/home/madanw/projects/sentinel/.venv`
 - Python: 3.11+
 - Box timezone: `America/Chicago` (CDT) — but unit pins fire time to `America/New_York` so it tracks the market regardless of box TZ
 - Fire time: weekdays 09:45 ET (15 min after open)
@@ -20,10 +20,10 @@ Run `main.py` weekdays at 09:45 America/New_York on a remote Ubuntu box via syst
 
 Run on the remote box (`ssh madanw@<host>`):
 
-1. Clone repo to `~/projects/algo-bot` (skip if already cloned).
+1. Clone repo to `~/projects/sentinel` (skip if already cloned).
 2. Create venv + install deps:
    ```bash
-   cd ~/projects/algo-bot
+   cd ~/projects/sentinel
    python3 -m venv .venv
    .venv/bin/pip install --require-hashes -r backend/requirements.txt
    ```
@@ -49,7 +49,7 @@ Unit files live in `systemd/` in the repo. Copy them to the user unit dir:
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp systemd/algo-bot.service systemd/algo-bot.timer systemd/algo-bot-monitor.service \
+cp systemd/sentinel.service systemd/sentinel.timer systemd/sentinel-monitor.service \
    ~/.config/systemd/user/
 ```
 
@@ -59,7 +59,7 @@ cp systemd/algo-bot.service systemd/algo-bot.timer systemd/algo-bot-monitor.serv
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now algo-bot.timer
+systemctl --user enable --now sentinel.timer
 loginctl enable-linger madanw                # survive logout / reboot
 systemctl --user list-timers | grep algo
 ```
@@ -69,15 +69,15 @@ systemctl --user list-timers | grep algo
 ### Logs
 
 ```bash
-tail -f ~/algo-bot.log
-journalctl --user -u algo-bot.service -f
+tail -f ~/sentinel.log
+journalctl --user -u sentinel.service -f
 ```
 
 ### Manual Trigger (end-to-end test)
 
 ```bash
-systemctl --user start algo-bot.service
-systemctl --user status algo-bot.service
+systemctl --user start sentinel.service
+systemctl --user status sentinel.service
 ```
 
 Then check Supabase `pipeline_runs` for the new row.
@@ -98,7 +98,7 @@ Then check Supabase `pipeline_runs` for the new row.
 
 | Symptom | First check |
 |---------|-------------|
-| No `pipeline_runs` row today | `systemctl --user list-timers` (timer enabled?), `~/algo-bot.log` (did it fire?) |
+| No `pipeline_runs` row today | `systemctl --user list-timers` (timer enabled?), `~/sentinel.log` (did it fire?) |
 | Log shows fire, no DB row | Supabase creds in `.env`, `pipeline_logger` errors in log |
 | DB row but `trade_submitted=false` | Read `skip_reason` column |
 | Unexpected trade | Alpaca dashboard → Orders tab is ground truth |
